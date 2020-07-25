@@ -1,0 +1,77 @@
+# FUN oopify(prefix) -> prefix + "oop"
+
+#FUN join(elements, separator)
+#	VAR result = ""
+#	VAR len = LEN(elements)
+
+#	FOR i = 0 TO len THEN
+#		VAR result = result + elements/i
+#		IF i != len - 1 THEN VAR result = result + separator
+#	END
+
+#	RETURN result
+#END
+
+#FUN map(elements, func)
+#	VAR new_elements = []
+
+#	FOR i = 0 TO LEN(elements) THEN
+#		APPEND(new_elements, func(elements/i))
+#	END
+
+#	RETURN new_elements
+#END
+
+#PRINT("Greetings universe!")
+
+#FOR i = 0 TO 5 THEN
+#	PRINT(join(map(["l", "sp"], oopify), ", "))
+#END
+
+VAR milista = [8,9,7]
+
+# IF milista/1 == 10 THEN PRINT("SIII") ELIF milista/1 == 9 THEN PRINT("NOOO") ELSE PRINT("ULTIMO")
+# IF milista/1 == 10 THEN; PRINT("SIII"); PRINT("eeesss"); ELIF milista/1 == 9 THEN; PRINT("NOOO"); PRINT("ES NUEVE"); ELSE PRINT("ULTIMO")
+
+#IF milista/1 == 10 THEN
+#    PRINT("SIII")
+#    PRINT("eeesss")
+#    #END
+#ELIF milista/1 == 9 THEN
+#    PRINT("NOOO")
+#    PRINT("ES NUEVE")
+#    END
+#ELSE 
+#    PRINT("ULTIMO") 
+#    PRINT("NINGUO")
+#    END
+#
+#? milista/1 == 10 THEN
+#    PRINT("SIII")
+#    PRINT("eeesss")
+#    #END
+#?? milista/1 == 9 THEN
+#    PRINT("NOOO")
+#    PRINT("ES NUEVEE")
+#    #END
+#??? 
+#    PRINT("ULTIMO") 
+#    PRINT("NINGUO")
+#    END
+
+# milista/1 == 10 THEN; PRINT("SIII"); PRINT("eeesss"); ?? milista/1 == 9 THEN; PRINT("NOOO"); PRINT("ES NUEVE"); ??? PRINT("ULTIMO")
+
+VAR i = 0
+
+#--- i<10 THEN; VAR i = i + 1; PRINT(i); END
+
+#--- i<10 THEN
+# VAR i = i + 2
+# PRINT(i)
+# END
+
+#+++ i = 0 TO 7 THEN
+#	PRINT(i)
+#END
+
+PRINT("Hoolaaa")
