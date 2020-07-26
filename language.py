@@ -126,16 +126,16 @@ TT_ELSEIF        = 'ELSEIF'
 TT_ELSE          = 'ELSE'
 TT_AND           = 'AND'
 TT_OR            = 'OR'
+TT_NOT            = 'NOT'
 TT_WHILE         = 'WHILE'
 TT_FOR           = 'FOR'
 TT_EOF			 = 'EOF'
 
 KEYWORDS = [
   'VAR',
-  'NOT',
   'TO',
   'STEP',
-  'FUN',
+  'FUNCTION',
   'THEN',
   'END',
   'RETURN',
@@ -223,9 +223,7 @@ class Lexer:
         tokens.append(Token(TT_RSQUARE, pos_start=self.pos))
         self.advance()
       elif self.current_char == '!':
-        token, error = self.make_not_equals()
-        if error: return [], error
-        tokens.append(token)
+        tokens.append(self.make_not_or_not_equals())
       elif self.current_char == '=':
         tokens.append(self.make_equals())
       elif self.current_char == '<':
@@ -333,16 +331,16 @@ class Lexer:
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
-  def make_not_equals(self):
+  def make_not_or_not_equals(self):
+    tok_type = TT_NOT
     pos_start = self.pos.copy()
     self.advance()
 
     if self.current_char == '=':
       self.advance()
-      return Token(TT_NE, pos_start=pos_start, pos_end=self.pos), None
+      tok_type = TT_NE
 
-    self.advance()
-    return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
+    return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
   
   def make_equals(self):
     tok_type = TT_EQ
@@ -694,7 +692,7 @@ class Parser:
     if res.error:
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
-        "Expected 'RETURN', 'CONTINUE', 'BREAK', 'VAR', '??', '---', '+++', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'"
+        "Expected 'RETURN', 'CONTINUE', 'BREAK', 'VAR', '??', '---', '+++', 'FUNCTION', int, float, identifier, '+', '-', '(', '[' or '!'"
       ))
     return res.success(expr)
 
@@ -732,7 +730,7 @@ class Parser:
     if res.error:
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
-        "Expected 'VAR', '??', '---', '+++', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'"
+        "Expected 'VAR', '??', '---', '+++', 'FUNCTION', int, float, identifier, '+', '-', '(', '[' or '!'"
       ))
 
     return res.success(node)
@@ -740,7 +738,7 @@ class Parser:
   def comp_expr(self):
     res = ParseResult()
 
-    if self.current_tok.matches(TT_KEYWORD, 'NOT'):
+    if self.current_tok.type == TT_NOT:
       op_tok = self.current_tok
       res.register_advancement()
       self.advance()
@@ -754,7 +752,7 @@ class Parser:
     if res.error:
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
-        "Expected int, float, identifier, '+', '-', '(', '[', '??', '---', '+++', 'FUN' or 'NOT'"
+        "Expected int, float, identifier, '+', '-', '(', '[', '??', '---', '+++', 'FUNCTION' or '!'"
       ))
 
     return res.success(node)
@@ -799,7 +797,7 @@ class Parser:
         if res.error:
           return res.failure(InvalidSyntaxError(
             self.current_tok.pos_start, self.current_tok.pos_end,
-            "Expected ')', 'VAR', '??', '---', '+++', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'"
+            "Expected ')', 'VAR', '??', '---', '+++', 'FUNCTION', int, float, identifier, '+', '-', '(', '[' or '!'"
           ))
 
         while self.current_tok.type == TT_COMMA:
@@ -874,14 +872,14 @@ class Parser:
       if res.error: return res
       return res.success(while_expr)
 
-    elif tok.matches(TT_KEYWORD, 'FUN'):
+    elif tok.matches(TT_KEYWORD, 'FUNCTION'):
       func_def = res.register(self.func_def())
       if res.error: return res
       return res.success(func_def)
 
     return res.failure(InvalidSyntaxError(
       tok.pos_start, tok.pos_end,
-      "Expected int, float, identifier, '+', '-', '(', '[', ??', '---', '+++', 'FUN'"
+      "Expected int, float, identifier, '+', '-', '(', '[', ??', '---', '+++', 'FUNCTUON'"
     ))
 
   def list_expr(self):
@@ -906,7 +904,7 @@ class Parser:
       if res.error:
         return res.failure(InvalidSyntaxError(
           self.current_tok.pos_start, self.current_tok.pos_end,
-          "Expected ']', 'VAR', '??', '---', '+++', 'FUN', int, float, identifier, '+', '-', '(', '[' or 'NOT'"
+          "Expected ']', 'VAR', '??', '---', '+++', 'FUNCTION', int, float, identifier, '+', '-', '(', '[' or '!'"
         ))
 
       while self.current_tok.type == TT_COMMA:
@@ -1177,10 +1175,10 @@ class Parser:
   def func_def(self):
     res = ParseResult()
 
-    if not self.current_tok.matches(TT_KEYWORD, 'FUN'):
+    if not self.current_tok.matches(TT_KEYWORD, 'FUNCTION'):
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
-        f"Expected 'FUN'"
+        f"Expected 'FUNCTION'"
       ))
 
     res.register_advancement()
@@ -2064,7 +2062,7 @@ class Interpreter:
 
     if node.op_tok.type == TT_MINUS:
       number, error = number.multed_by(Number(-1))
-    elif node.op_tok.matches(TT_KEYWORD, 'NOT'):
+    elif node.op_tok.type == TT_NOT:
       number, error = number.notted()
 
     if error:

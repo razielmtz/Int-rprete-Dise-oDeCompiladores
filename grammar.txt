@@ -1,0 +1,59 @@
+statements  : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
+
+statement		: KEYWORD:RETURN expr?
+						: KEYWORD:CONTINUE
+						: KEYWORD:BREAK
+						: expr
+
+expr        : KEYWORD:VAR IDENTIFIER EQ expr
+            : comp-expr ((TT_AND|TT_OR) comp-expr)*
+
+comp-expr   : TT_NOT comp-expr
+            : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr  :	term ((PLUS|MINUS) term)*
+
+term        : factor ((MUL|DIV) factor)*
+
+factor      : (PLUS|MINUS) factor
+            : power
+
+power       : call (POW factor)*
+
+call        : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+
+atom        : INT|FLOAT|STRING|IDENTIFIER
+            : LPAREN expr RPAREN
+            : list-expr
+            : if-expr
+            : for-expr
+            : while-expr
+            : func-def
+
+list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
+
+if-expr     : TT_IF expr KEYWORD:THEN
+              (statement if-expr-b|if-expr-c?)
+            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+
+if-expr-b   : TT_ELSEIF expr KEYWORD:THEN
+              (statement if-expr-b|if-expr-c?)
+            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+
+if-expr-c   : TT_ELSE
+              statement
+            | (NEWLINE statements KEYWORD:END)
+
+for-expr    : TT_FOR IDENTIFIER EQ expr KEYWORD:TO expr 
+              (KEYWORD:STEP expr)? KEYWORD:THEN
+              statement
+            | (NEWLINE statements KEYWORD:END)
+
+while-expr  : TT_WHILE expr KEYWORD:THEN
+              statement
+            | (NEWLINE statements KEYWORD:END)
+
+func-def    : KEYWORD:FUNCTION IDENTIFIER?
+              LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+              (ARROW expr)
+            | (NEWLINE statements KEYWORD:END)

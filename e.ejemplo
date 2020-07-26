@@ -51,7 +51,7 @@ VAR milista = [8,9,7]
     PRINT("SIII")
     PRINT("eeesss")
     #END
-?? milista/1 == 9 | milista/0 == 10 THEN
+?? milista/1 == 9 & ! milista/0 == 10 THEN
     PRINT("NOOO")
     PRINT("ES NUEVEE Y OCHO")
     #END
