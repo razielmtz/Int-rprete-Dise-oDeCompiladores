@@ -6,6 +6,6 @@
 #### AND 	  &
 #### OR  	  |
 #### NOT    !
-### THEN    -->
-### WHILE   +++
-### FOR     ---
+#### THEN   -->
+#### WHILE  +++
+#### FOR    ---
