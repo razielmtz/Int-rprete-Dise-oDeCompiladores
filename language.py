@@ -124,14 +124,14 @@ TT_NEWLINE	    	= 'NEWLINE'
 TT_IF            = 'IF'
 TT_ELSEIF        = 'ELSEIF'
 TT_ELSE          = 'ELSE'
+TT_AND           = 'AND'
+TT_OR            = 'OR'
 TT_WHILE         = 'WHILE'
 TT_FOR           = 'FOR'
-TT_EOF				= 'EOF'
+TT_EOF			 = 'EOF'
 
 KEYWORDS = [
   'VAR',
-  'AND',
-  'OR',
   'NOT',
   'TO',
   'STEP',
@@ -233,7 +233,11 @@ class Lexer:
       elif self.current_char == '>':
         tokens.append(self.make_greater_than())
       elif self.current_char == '?':
-        tokens.append(self.make_iff())
+        tokens.append(self.make_if())
+      elif self.current_char == '&':
+        tokens.append(self.make_and())
+      elif self.current_char == '|':
+        tokens.append(self.make_or())
       elif self.current_char == ',':
         tokens.append(Token(TT_COMMA, pos_start=self.pos))
         self.advance()
@@ -373,7 +377,7 @@ class Lexer:
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
-  def make_iff(self):
+  def make_if(self):
     tok_type = TT_IF
     pos_start = self.pos.copy()
     self.advance()
@@ -385,6 +389,20 @@ class Lexer:
     if self.current_char == '?':
       self.advance()
       tok_type = TT_ELSE
+
+    return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
+
+  def make_and(self):
+    tok_type = TT_AND
+    pos_start = self.pos.copy()
+    self.advance()
+
+    return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
+
+  def make_or(self):
+    tok_type = TT_OR
+    pos_start = self.pos.copy()
+    self.advance()
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -709,7 +727,7 @@ class Parser:
       if res.error: return res
       return res.success(VarAssignNode(var_name, expr))
 
-    node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, 'AND'), (TT_KEYWORD, 'OR'))))
+    node = res.register(self.bin_op(self.comp_expr, (TT_AND, TT_OR)))
 
     if res.error:
       return res.failure(InvalidSyntaxError(
@@ -915,13 +933,13 @@ class Parser:
 
   def if_expr(self):
     res = ParseResult()
-    all_cases = res.register(self.if_expr_cases('?'))
+    all_cases = res.register(self.if_expr_cases(TT_IF))
     if res.error: return res
     cases, else_case = all_cases
     return res.success(IfNode(cases, else_case))
 
   def if_expr_b(self):
-    return self.if_expr_cases('??')
+    return self.if_expr_cases(TT_ELSEIF)
     
   def if_expr_c(self):
     res = ParseResult()
@@ -968,16 +986,16 @@ class Parser:
     
     return res.success((cases, else_case))
 
-  def if_expr_cases(self, case_keyword):
+  def if_expr_cases(self, case_type):
     res = ParseResult()
     cases = []
     else_case = None
 
-    # if not self.current_tok.matches(TT_KEYWORD, case_keyword):
-    #   return res.failure(InvalidSyntaxError(
-    #     self.current_tok.pos_start, self.current_tok.pos_end,
-    #     f"Expected '{case_keyword}'"
-    #   ))
+    if not self.current_tok.type == case_type:
+      return res.failure(InvalidSyntaxError(
+        self.current_tok.pos_start, self.current_tok.pos_end,
+        f"Expected '{case_type}'"
+      ))
 
     res.register_advancement()
     self.advance()
@@ -2027,9 +2045,9 @@ class Interpreter:
       result, error = left.get_comparison_lte(right)
     elif node.op_tok.type == TT_GTE:
       result, error = left.get_comparison_gte(right)
-    elif node.op_tok.matches(TT_KEYWORD, 'AND'):
+    elif node.op_tok.type == TT_AND:
       result, error = left.anded_by(right)
-    elif node.op_tok.matches(TT_KEYWORD, 'OR'):
+    elif node.op_tok.type == TT_OR:
       result, error = left.ored_by(right)
 
     if error:

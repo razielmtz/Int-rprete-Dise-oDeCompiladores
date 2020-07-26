@@ -43,25 +43,26 @@ VAR milista = [8,9,7]
 #    END
 #ELSE 
 #    PRINT("ULTIMO") 
-#    PRINT("NINGUO")
+#    PRINT("NINGUNO")
 #    END
 #
-#? milista/1 == 10 THEN
-#    PRINT("SIII")
-#    PRINT("eeesss")
-#    #END
-#?? milista/1 == 9 THEN
-#    PRINT("NOOO")
-#    PRINT("ES NUEVEE")
-#    #END
-#??? 
-#    PRINT("ULTIMO") 
-#    PRINT("NINGUO")
-#    END
+
+? milista/1 == 10 THEN
+    PRINT("SIII")
+    PRINT("eeesss")
+    #END
+?? milista/1 == 9 | milista/0 == 10 THEN
+    PRINT("NOOO")
+    PRINT("ES NUEVEE Y OCHO")
+    #END
+??? 
+    PRINT("ULTIMO") 
+    PRINT("NINGUO")
+    END
 
 # milista/1 == 10 THEN; PRINT("SIII"); PRINT("eeesss"); ?? milista/1 == 9 THEN; PRINT("NOOO"); PRINT("ES NUEVE"); ??? PRINT("ULTIMO")
 
-VAR i = 0
+#VAR i = 0
 
 #--- i<10 THEN; VAR i = i + 1; PRINT(i); END
 
