@@ -32,3 +32,5 @@ RUN("test")
 |   FOR          |    +++   |
 |   VAR          |    $     |
 |   FUNCTION     |    @     |
+|   END          |    @@    |
+|   RETURN       |    >>>   |
