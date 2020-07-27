@@ -1,6 +1,5 @@
 
 import language
-
 while True:
 	text = input('basic > ')
 	if text.strip() == "": continue

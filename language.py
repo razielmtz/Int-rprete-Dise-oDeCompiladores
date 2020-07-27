@@ -129,13 +129,15 @@ TT_OR            = 'OR'
 TT_NOT           = 'NOT'
 TT_WHILE         = 'WHILE'
 TT_FOR           = 'FOR'
-TT_EOF			 = 'EOF'
+TT_EOF			     = 'EOF'
 TT_VAR           = 'VAR'
 TT_THEN          = 'THEN'
 TT_FUN           = 'FUNCTION'
 TT_END           = 'END'
-TT_RETURN        = 'RETURN'
-
+TT_RETURN        = 'RETURN'   
+TT_CONTINUE      = 'CONTINUE' 
+TT_BREAK         = 'BREAK'    
+TT_STEP          = 'STEP'     
 
 KEYWORDS = [
   'VAR',
@@ -233,16 +235,16 @@ class Lexer:
         tokens.append(Token(TT_RSQUARE, pos_start=self.pos))
         self.advance()
       elif self.current_char == '@':
-        tokens.append(self.make_fun())
+        tokens.append(self.make_fun_or_end())
         self.advance()
       elif self.current_char == '!':
-        tokens.append(self.make_not_or_not_equals())
+        tokens.append(self.make_not_or_not_equals_or_break())
       elif self.current_char == '=':
         tokens.append(self.make_equals())
       elif self.current_char == '<':
-        tokens.append(self.make_less_than())
+        tokens.append(self.make_less_than_or_step_or_return())
       elif self.current_char == '>':
-        tokens.append(self.make_greater_than_or_return())
+        tokens.append(self.make_greater_than_or_continue())
       elif self.current_char == '?':
         tokens.append(self.make_if())
       elif self.current_char == '&':
@@ -365,7 +367,7 @@ class Lexer:
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
-  def make_not_or_not_equals(self):
+  def make_not_or_not_equals_or_break(self):
     tok_type = TT_NOT
     pos_start = self.pos.copy()
     self.advance()
@@ -373,6 +375,11 @@ class Lexer:
     if self.current_char == '=':
       self.advance()
       tok_type = TT_NE
+    elif self.current_char == '!':
+      self.advance()
+      if self.current_char == '!':
+        tok_type = TT_BREAK
+        self.advance()
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -387,7 +394,7 @@ class Lexer:
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
-  def make_less_than(self):
+  def make_less_than_or_step_or_return(self):
     tok_type = TT_LT
     pos_start = self.pos.copy()
     self.advance()
@@ -395,10 +402,18 @@ class Lexer:
     if self.current_char == '=':
       self.advance()
       tok_type = TT_LTE
+    elif self.current_char == '>':
+      tok_type = TT_STEP
+      self.advance()
+    elif self.current_char == '<':
+      self.advance()
+      if self.current_char == '<':
+        tok_type = TT_RETURN
+        self.advance()
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
-  def make_greater_than_or_return(self):
+  def make_greater_than_or_continue(self):
     tok_type = TT_GT
     pos_start = self.pos.copy()
     self.advance()
@@ -410,7 +425,7 @@ class Lexer:
       self.advance()
       if self.current_char == '>':
           self.advance()
-          tok_type = TT_RETURN
+          tok_type = TT_CONTINUE
 
     return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -717,12 +732,12 @@ class Parser:
         self.reverse(res.to_reverse_count)
       return res.success(ReturnNode(expr, pos_start, self.current_tok.pos_start.copy()))
 
-    if self.current_tok.matches(TT_KEYWORD, 'CONTINUE'):
+    if self.current_tok.type == TT_CONTINUE or self.current_tok.matches(TT_KEYWORD, 'CONTINUE'):
       res.register_advancement()
       self.advance()
       return res.success(ContinueNode(pos_start, self.current_tok.pos_start.copy()))
 
-    if self.current_tok.matches(TT_KEYWORD, 'BREAK'):
+    if self.current_tok.type == TT_BREAK or self.current_tok.matches(TT_KEYWORD, 'BREAK'):
       res.register_advancement()
       self.advance()
       return res.success(BreakNode(pos_start, self.current_tok.pos_start.copy()))
@@ -1123,7 +1138,7 @@ class Parser:
     end_value = res.register(self.expr())
     if res.error: return res
 
-    if self.current_tok.matches(TT_KEYWORD, 'STEP'):
+    if self.current_tok.type == TT_STEP or self.current_tok.matches(TT_KEYWORD, 'STEP'):
       res.register_advancement()
       self.advance()
 

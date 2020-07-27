@@ -12,7 +12,45 @@
             @@
     @@
     PRINT("END SCRIPT : list should be [0,0,0]")
-    >>> milista
+    <<< milista
 @@
 
-PRINT(odd_zero_list(5))
+@ test_break(num)
+
+    $ i = 0
+
+    --- i < 10 -->
+        $ i = i + 1
+        ? i == num -->
+            $ i = num
+            !!!             #break
+        @@
+    @@
+
+    <<< i                   #return i
+@@
+
+@ test_continue(num)
+
+    $ i = 0
+
+    --- i < 10 -->
+        $ i = i + 1
+        ? i == num -->
+            >>>             #continue, se salta el print de abajo (cuando es igual a num)
+        @@
+        PRINT(i)
+    @@
+@@
+
+@ test_step(num)
+    +++ i = 0 TO num <> 2 -->
+        PRINT(i)
+    @@
+@@
+
+#PRINT(odd_zero_list(5))
+
+#PRINT(test_break(4))
+#test_continue(7)
+test_step(10)
