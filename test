@@ -1,0 +1,20 @@
+@ odd_zero_list(len)
+    $ milista = [8,9,7]
+
+    +++ i = 0 TO len -->
+        $ i = i + 1
+        ? milista/1 == 10 -->
+            $ milista = [0,0,0]
+            #END
+        ?? milista/1 == 9 & ! milista/0 == 10 -->
+            $ milista = [10,9,7]
+            #END
+        ???
+            $ milista = [10,10,9]
+            END
+    END
+    PRINT("END SCRIPT : list should be [0,0,0]")
+    RETURN milista
+END
+
+PRINT(odd_zero_list(5))
