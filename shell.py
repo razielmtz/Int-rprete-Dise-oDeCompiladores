@@ -1,7 +1,9 @@
 
 import language
+
+# Infinite loop for shell
 while True:
-	text = input('basic > ')
+	text = input('language > ')
 	if text.strip() == "": continue
 	result, error = language.run('<stdin>', text)
 

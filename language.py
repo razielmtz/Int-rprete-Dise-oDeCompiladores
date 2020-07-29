@@ -1,7 +1,3 @@
-#######################################
-# IMPORTS
-#######################################
-
 from strings_with_arrows import *
 
 import string
@@ -72,7 +68,7 @@ class RTError(Error):
 # POSITION
 #######################################
 
-class Position:
+class Position: # Keep track of the line number, column number and current index
   def __init__(self, idx, ln, col, fn, ftxt):
     self.idx = idx
     self.ln = ln
@@ -97,6 +93,7 @@ class Position:
 # TOKENS
 #######################################
 
+#Token Types
 TT_INT			 = 'INT'
 TT_FLOAT    	 = 'FLOAT'
 TT_STRING		 = 'STRING'
@@ -151,6 +148,7 @@ KEYWORDS = [
   'BREAK',
 ]
 
+
 class Token:
   def __init__(self, type_, value=None, pos_start=None, pos_end=None):
     self.type = type_
@@ -183,11 +181,11 @@ class Lexer:
     self.current_char = None
     self.advance()
 
-  def advance(self):
+  def advance(self): # Advance to next character of the input
     self.pos.advance(self.current_char)
     self.current_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
 
-  def make_tokens(self):
+  def make_tokens(self): # Go trough all the input characters and create the tokens
     tokens = []
 
     while self.current_char != None:
@@ -263,7 +261,7 @@ class Lexer:
     tokens.append(Token(TT_EOF, pos_start=self.pos))
     return tokens, None
 
-  def make_number(self):
+  def make_number(self): # Create int or float token
     num_str = ''
     dot_count = 0
     pos_start = self.pos.copy()
@@ -276,9 +274,9 @@ class Lexer:
       self.advance()
 
     if dot_count == 0:
-      return Token(TT_INT, int(num_str), pos_start, self.pos)
+      return Token(TT_INT, int(num_str), pos_start, self.pos) # return int
     else:
-      return Token(TT_FLOAT, float(num_str), pos_start, self.pos)
+      return Token(TT_FLOAT, float(num_str), pos_start, self.pos) # return float
 
   def make_string(self):
     string = ''
@@ -470,7 +468,7 @@ class Lexer:
 # NODES
 #######################################
 
-class NumberNode:
+class NumberNode: # int or float
   def __init__(self, tok):
     self.tok = tok
 
@@ -497,14 +495,14 @@ class ListNode:
     self.pos_start = pos_start
     self.pos_end = pos_end
 
-class VarAccessNode:
+class VarAccessNode: # get x variable
   def __init__(self, var_name_tok):
     self.var_name_tok = var_name_tok
 
     self.pos_start = self.var_name_tok.pos_start
     self.pos_end = self.var_name_tok.pos_end
 
-class VarAssignNode:
+class VarAssignNode: # set x variable
   def __init__(self, var_name_tok, value_node):
     self.var_name_tok = var_name_tok
     self.value_node = value_node
@@ -512,7 +510,7 @@ class VarAssignNode:
     self.pos_start = self.var_name_tok.pos_start
     self.pos_end = self.value_node.pos_end
 
-class BinOpNode:
+class BinOpNode: # Operation between two nodes
   def __init__(self, left_node, op_tok, right_node):
     self.left_node = left_node
     self.op_tok = op_tok
@@ -613,6 +611,7 @@ class BreakNode:
 # PARSE RESULT
 #######################################
 
+# Keep track of errors, if any and its node
 class ParseResult:
   def __init__(self):
     self.error = None
@@ -637,12 +636,12 @@ class ParseResult:
       return None
     return self.register(res)
 
-  def success(self, node):
+  def success(self, node): # If everything is ok return success
     self.node = node
     return self
 
-  def failure(self, error):
-    if not self.error or self.last_registered_advance_count == 0:
+  def failure(self, error): #  Return the error, if any
+    if not self.error or self.last_registered_advance_count == 0: # have't advanced since
       self.error = error
     return self
 
@@ -672,7 +671,7 @@ class Parser:
 
   def parse(self):
     res = self.statements()
-    if not res.error and self.current_tok.type != TT_EOF:
+    if not res.error and self.current_tok.type != TT_EOF: # If there are tokens left and it is at EOF there is a syntax error
       return res.failure(InvalidSyntaxError(
         self.current_tok.pos_start, self.current_tok.pos_end,
         "Token cannot appear after previous tokens"
@@ -750,7 +749,7 @@ class Parser:
       ))
     return res.success(expr)
 
-  def expr(self):
+  def expr(self): # construct expression node
     res = ParseResult()
 
     if self.current_tok.type == TT_VAR or self.current_tok.matches(TT_KEYWORD, 'VAR'):
@@ -779,7 +778,7 @@ class Parser:
       if res.error: return res
       return res.success(VarAssignNode(var_name, expr))
 
-    node = res.register(self.bin_op(self.comp_expr, (TT_AND, TT_OR)))
+    node = res.register(self.bin_op(self.comparison_expr, (TT_AND, TT_OR)))
 
     if res.error:
       return res.failure(InvalidSyntaxError(
@@ -789,7 +788,7 @@ class Parser:
 
     return res.success(node)
 
-  def comp_expr(self):
+  def comparison_expr(self):
     res = ParseResult()
 
     if self.current_tok.type == TT_NOT:
@@ -797,7 +796,7 @@ class Parser:
       res.register_advancement()
       self.advance()
 
-      node = res.register(self.comp_expr())
+      node = res.register(self.comparison_expr())
       if res.error: return res
       return res.success(UnaryOpNode(op_tok, node))
 
@@ -933,7 +932,7 @@ class Parser:
 
     return res.failure(InvalidSyntaxError(
       tok.pos_start, tok.pos_end,
-      "Expected int, float, identifier, '+', '-', '(', '[', ??', '---', '+++', 'FUNCTUON'"
+      "Expected int, float, identifier, '+', '-', '(', '[', ??', '---', '+++', 'FUNCTION'"
     ))
 
   def list_expr(self):
@@ -1337,7 +1336,8 @@ class Parser:
 
   ###################################
 
-  def bin_op(self, func_a, ops, func_b=None):
+  # grab left and right nodes to make binary operations with them and the same with their children
+  def bin_op(self, func_a, ops, func_b=None): 
     if func_b == None:
       func_b = func_a
 
@@ -1353,7 +1353,7 @@ class Parser:
       if res.error: return res
       left = BinOpNode(left, op_tok, right)
 
-    return res.success(left)
+    return res.success(left) # if there were no errors return the operation result
 
 #######################################
 # RUNTIME RESULT
@@ -1403,7 +1403,7 @@ class RTResult:
     return self
 
   def should_return(self):
-    # Note: this will allow you to continue and break outside the current function
+    # This allows to continue and break outside the current function
     return (
       self.error or
       self.func_return_value or
@@ -1488,6 +1488,7 @@ class Value:
       self.context
     )
 
+# Operate between numbers
 class Number(Value):
   def __init__(self, value):
     super().__init__()
@@ -1599,7 +1600,6 @@ class Number(Value):
 Number.null = Number(0)
 Number.false = Number(0)
 Number.true = Number(1)
-Number.math_PI = Number(math.pi)
 
 class String(Value):
   def __init__(self, value):
@@ -1696,7 +1696,7 @@ class BaseFunction(Value):
     super().__init__()
     self.name = name or "<anonymous>"
 
-  def generate_new_context(self):
+  def generate_new_context(self): # generate context (symbol table) for each function
     new_context = Context(self.name, self.context, self.pos_start)
     new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
     return new_context
@@ -1744,7 +1744,7 @@ class Function(BaseFunction):
   def execute(self, args):
     res = RTResult()
     interpreter = Interpreter()
-    exec_ctx = self.generate_new_context()
+    exec_ctx = self.generate_new_context() 
 
     res.register(self.check_and_populate_args(self.arg_names, args, exec_ctx))
     if res.should_return(): return res
@@ -1783,7 +1783,7 @@ class BuiltInFunction(BaseFunction):
     return res.success(return_value)
 
   def no_visit_method(self, node, context):
-    raise Exception(f'No execute_{self.name} method defined')
+    raise Exception(f'execute_{self.name} method is undefined')
 
   def copy(self):
     copy = BuiltInFunction(self.name)
@@ -1801,50 +1801,10 @@ class BuiltInFunction(BaseFunction):
     return RTResult().success(Number.null)
   execute_print.arg_names = ['value']
 
-  def execute_print_ret(self, exec_ctx):
-    return RTResult().success(String(str(exec_ctx.symbol_table.get('value'))))
-  execute_print_ret.arg_names = ['value']
-
-  def execute_input(self, exec_ctx):
-    text = input()
-    return RTResult().success(String(text))
-  execute_input.arg_names = []
-
-  def execute_input_int(self, exec_ctx):
-    while True:
-      text = input()
-      try:
-        number = int(text)
-        break
-      except ValueError:
-        print(f"'{text}' must be an integer. Try again!")
-    return RTResult().success(Number(number))
-  execute_input_int.arg_names = []
-
-  def execute_clear(self, exec_ctx):
-    os.system('cls' if os.name == 'nt' else 'cls')
-    return RTResult().success(Number.null)
-  execute_clear.arg_names = []
-
-  def execute_is_number(self, exec_ctx):
-    is_number = isinstance(exec_ctx.symbol_table.get("value"), Number)
-    return RTResult().success(Number.true if is_number else Number.false)
-  execute_is_number.arg_names = ["value"]
-
   def execute_is_string(self, exec_ctx):
     is_number = isinstance(exec_ctx.symbol_table.get("value"), String)
     return RTResult().success(Number.true if is_number else Number.false)
   execute_is_string.arg_names = ["value"]
-
-  def execute_is_list(self, exec_ctx):
-    is_number = isinstance(exec_ctx.symbol_table.get("value"), List)
-    return RTResult().success(Number.true if is_number else Number.false)
-  execute_is_list.arg_names = ["value"]
-
-  def execute_is_function(self, exec_ctx):
-    is_number = isinstance(exec_ctx.symbol_table.get("value"), BaseFunction)
-    return RTResult().success(Number.true if is_number else Number.false)
-  execute_is_function.arg_names = ["value"]
 
   def execute_append(self, exec_ctx):
     list_ = exec_ctx.symbol_table.get("list")
@@ -1961,14 +1921,6 @@ class BuiltInFunction(BaseFunction):
   execute_run.arg_names = ["fn"]
 
 BuiltInFunction.print       = BuiltInFunction("print")
-BuiltInFunction.print_ret   = BuiltInFunction("print_ret")
-BuiltInFunction.input       = BuiltInFunction("input")
-BuiltInFunction.input_int   = BuiltInFunction("input_int")
-BuiltInFunction.clear       = BuiltInFunction("clear")
-BuiltInFunction.is_number   = BuiltInFunction("is_number")
-BuiltInFunction.is_string   = BuiltInFunction("is_string")
-BuiltInFunction.is_list     = BuiltInFunction("is_list")
-BuiltInFunction.is_function = BuiltInFunction("is_function")
 BuiltInFunction.append      = BuiltInFunction("append")
 BuiltInFunction.pop         = BuiltInFunction("pop")
 BuiltInFunction.extend      = BuiltInFunction("extend")
@@ -1979,46 +1931,48 @@ BuiltInFunction.run					= BuiltInFunction("run")
 # CONTEXT
 #######################################
 
+# Hold the context of the program (the entire program or inside a function)
 class Context:
   def __init__(self, display_name, parent=None, parent_entry_pos=None):
     self.display_name = display_name
     self.parent = parent
     self.parent_entry_pos = parent_entry_pos
-    self.symbol_table = None
+    self.symbol_table = None # Access symbol table of each context (global, functions etc)
 
 #######################################
 # SYMBOL TABLE
 #######################################
 
-class SymbolTable:
+class SymbolTable: # KEEPS TRACK OF VARIABLE NAMES AND THEIR VALUES IN A DICTIONARY
   def __init__(self, parent=None):
     self.symbols = {}
-    self.parent = parent
+    self.parent = parent # Symbol tables can have other symbol table as parent like global variables
 
-  def get(self, name):
+  def get(self, name): # get value of a specific variable
     value = self.symbols.get(name, None)
     if value == None and self.parent:
       return self.parent.get(name)
     return value
 
-  def set(self, name, value):
+  def set(self, name, value): # assign value to variable
     self.symbols[name] = value
 
-  def remove(self, name):
+  def remove(self, name): # delete variable
     del self.symbols[name]
 
 #######################################
 # INTERPRETER
 #######################################
 
-class Interpreter:
+# Traverse the AST and execute operations depending on the type of node
+class Interpreter: 
   def visit(self, node, context):
-    method_name = f'visit_{type(node).__name__}'
+    method_name = f'visit_{type(node).__name__}' # Visit Node method
     method = getattr(self, method_name, self.no_visit_method)
     return method(node, context)
 
   def no_visit_method(self, node, context):
-    raise Exception(f'No visit_{type(node).__name__} method defined')
+    raise Exception(f'visit_{type(node).__name__} method is undefined')
 
   ###################################
 
@@ -2044,7 +1998,7 @@ class Interpreter:
       List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
     )
 
-  def visit_VarAccessNode(self, node, context):
+  def visit_VarAccessNode(self, node, context): # get variable for use
     res = RTResult()
     var_name = node.var_name_tok.value
     value = context.symbol_table.get(var_name)
@@ -2059,7 +2013,7 @@ class Interpreter:
     value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
     return res.success(value)
 
-  def visit_VarAssignNode(self, node, context):
+  def visit_VarAssignNode(self, node, context):  # assign value to variable
     res = RTResult()
     var_name = node.var_name_tok.value
     value = res.register(self.visit(node.value_node, context))
@@ -2068,7 +2022,7 @@ class Interpreter:
     context.symbol_table.set(var_name, value)
     return res.success(value)
 
-  def visit_BinOpNode(self, node, context):
+  def visit_BinOpNode(self, node, context): # Operation between two nodes
     res = RTResult()
     left = res.register(self.visit(node.left_node, context))
     if res.should_return(): return res
@@ -2107,7 +2061,7 @@ class Interpreter:
     else:
       return res.success(result.set_pos(node.pos_start, node.pos_end))
 
-  def visit_UnaryOpNode(self, node, context):
+  def visit_UnaryOpNode(self, node, context): # support operations on a single node
     res = RTResult()
     number = res.register(self.visit(node.node, context))
     if res.should_return(): return res
@@ -2265,21 +2219,11 @@ class Interpreter:
 # RUN
 #######################################
 
-global_symbol_table = SymbolTable()
+global_symbol_table = SymbolTable() 
 global_symbol_table.set("NULL", Number.null)
 global_symbol_table.set("FALSE", Number.false)
 global_symbol_table.set("TRUE", Number.true)
-global_symbol_table.set("MATH_PI", Number.math_PI)
 global_symbol_table.set("PRINT", BuiltInFunction.print)
-global_symbol_table.set("PRINT_RET", BuiltInFunction.print_ret)
-global_symbol_table.set("INPUT", BuiltInFunction.input)
-global_symbol_table.set("INPUT_INT", BuiltInFunction.input_int)
-global_symbol_table.set("CLEAR", BuiltInFunction.clear)
-global_symbol_table.set("CLS", BuiltInFunction.clear)
-global_symbol_table.set("IS_NUM", BuiltInFunction.is_number)
-global_symbol_table.set("IS_STR", BuiltInFunction.is_string)
-global_symbol_table.set("IS_LIST", BuiltInFunction.is_list)
-global_symbol_table.set("IS_FUN", BuiltInFunction.is_function)
 global_symbol_table.set("APPEND", BuiltInFunction.append)
 global_symbol_table.set("POP", BuiltInFunction.pop)
 global_symbol_table.set("EXTEND", BuiltInFunction.extend)

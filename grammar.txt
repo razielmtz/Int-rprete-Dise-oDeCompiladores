@@ -1,14 +1,14 @@
 statements  : NEWLINE* statement (NEWLINE+ statement)* NEWLINE*
 
-statement		: KEYWORD:RETURN expr?
-						: KEYWORD:CONTINUE
-						: KEYWORD:BREAK
+statement		: RETURN expr?
+						: CONTINUE
+						: BREAK
 						: expr
 
-expr        : KEYWORD:VAR IDENTIFIER EQ expr
-            : comp-expr ((TT_AND|TT_OR) comp-expr)*
+expr        : VAR IDENTIFIER EQ expr
+            : comp-expr ((AND|OR) comp-expr)*
 
-comp-expr   : TT_NOT comp-expr
+comp-expr   : NOT comp-expr
             : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
 
 arith-expr  :	term ((PLUS|MINUS) term)*
@@ -32,28 +32,28 @@ atom        : INT|FLOAT|STRING|IDENTIFIER
 
 list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
-if-expr     : TT_IF expr KEYWORD:THEN
+if-expr     : IF expr THEN
               (statement if-expr-b|if-expr-c?)
-            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+            | (NEWLINE statements END|if-expr-b|if-expr-c)
 
-if-expr-b   : TT_ELSEIF expr KEYWORD:THEN
+if-expr-b   : ELSEIF expr THEN
               (statement if-expr-b|if-expr-c?)
-            | (NEWLINE statements KEYWORD:END|if-expr-b|if-expr-c)
+            | (NEWLINE statements END|if-expr-b|if-expr-c)
 
-if-expr-c   : TT_ELSE
+if-expr-c   : ELSE
               statement
-            | (NEWLINE statements KEYWORD:END)
+            | (NEWLINE statements END)
 
-for-expr    : TT_FOR IDENTIFIER EQ expr KEYWORD:TO expr 
-              (KEYWORD:STEP expr)? KEYWORD:THEN
+for-expr    : FOR IDENTIFIER EQ expr TO expr 
+              (STEP expr)? THEN
               statement
-            | (NEWLINE statements KEYWORD:END)
+            | (NEWLINE statements END)
 
-while-expr  : TT_WHILE expr KEYWORD:THEN
+while-expr  : WHILE expr THEN
               statement
-            | (NEWLINE statements KEYWORD:END)
+            | (NEWLINE statements END)
 
-func-def    : KEYWORD:FUNCTION IDENTIFIER?
+func-def    : FUNCTION IDENTIFIER?
               LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
               (ARROW expr)
-            | (NEWLINE statements KEYWORD:END)
+            | (NEWLINE statements END)
