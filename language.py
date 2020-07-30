@@ -1,3 +1,5 @@
+# Reference: 
+# https://www.youtube.com/watch?v=Eythq9848Fg&list=PLZQftyCk7_SdoVexSmwy_tBgs7P0b97yD&index=1
 from strings_with_arrows import *
 
 import string
@@ -41,7 +43,7 @@ class InvalidSyntaxError(Error):
   def __init__(self, pos_start, pos_end, details=''):
     super().__init__(pos_start, pos_end, 'Invalid Syntax', details)
 
-class RTError(Error):
+class RunTimeError(Error):
   def __init__(self, pos_start, pos_end, details, context):
     super().__init__(pos_start, pos_end, 'Runtime Error', details)
     self.context = context
@@ -465,7 +467,7 @@ class Lexer:
     self.advance()
 
 #######################################
-# NODES
+# NODES DEFINITION
 #######################################
 
 class NumberNode: # int or float
@@ -538,8 +540,8 @@ class IfNode:
     self.cases = cases
     self.else_case = else_case
 
-    self.pos_start = self.cases[0][0].pos_start
-    self.pos_end = (self.else_case or self.cases[len(self.cases) - 1])[0].pos_end
+    self.pos_start = self.cases[0][0].pos_start  # first case and expression
+    self.pos_end = (self.else_case or self.cases[len(self.cases) - 1])[0].pos_end # end of else case or last element in cases
 
 class ForNode:
   def __init__(self, var_name_tok, start_value_node, end_value_node, step_value_node, body_node, should_return_null):
@@ -624,7 +626,7 @@ class ParseResult:
     self.last_registered_advance_count = 1
     self.advance_count += 1
 
-  def register(self, res):
+  def register(self, res): # returns tokens node
     self.last_registered_advance_count = res.advance_count
     self.advance_count += res.advance_count
     if res.error: self.error = res.error
@@ -649,13 +651,13 @@ class ParseResult:
 # PARSER
 #######################################
 
-class Parser:
+class Parser: # generate AST 
   def __init__(self, tokens):
     self.tokens = tokens
     self.tok_idx = -1
     self.advance()
 
-  def advance(self):
+  def advance(self): # advance to the next token
     self.tok_idx += 1
     self.update_current_tok()
     return self.current_tok
@@ -1359,15 +1361,15 @@ class Parser:
 # RUNTIME RESULT
 #######################################
 
-class RTResult:
+class RunTimeResult:
   def __init__(self):
     self.reset()
 
   def reset(self):
     self.value = None
     self.error = None
-    self.func_return_value = None
-    self.loop_should_continue = False
+    self.func_return_value = None # Return up to the node tree
+    self.loop_should_continue = False # Propagate up until reaching the for or while nodes
     self.loop_should_break = False
 
   def register(self, res):
@@ -1397,7 +1399,7 @@ class RTResult:
     self.loop_should_break = True
     return self
 
-  def failure(self, error):
+  def failure(self, error): # send the error
     self.reset()
     self.error = error
     return self
@@ -1472,7 +1474,7 @@ class Value:
     return None, self.illegal_operation(other)
 
   def execute(self, args):
-    return RTResult().failure(self.illegal_operation())
+    return RunTimeResult().failure(self.illegal_operation())
 
   def copy(self):
     raise Exception('No copy method defined')
@@ -1482,7 +1484,7 @@ class Value:
 
   def illegal_operation(self, other=None):
     if not other: other = self
-    return RTError(
+    return RunTimeError(
       self.pos_start, other.pos_end,
       'Illegal operation',
       self.context
@@ -1515,7 +1517,7 @@ class Number(Value):
   def dived_by(self, other):
     if isinstance(other, Number):
       if other.value == 0:
-        return None, RTError(
+        return None, RunTimeError(
           other.pos_start, other.pos_end,
           'Division by zero',
           self.context
@@ -1650,7 +1652,7 @@ class List(Value):
         new_list.elements.pop(other.value)
         return new_list, None
       except:
-        return None, RTError(
+        return None, RunTimeError(
           other.pos_start, other.pos_end,
           'Element at this index could not be removed from list because index is out of bounds',
           self.context
@@ -1671,7 +1673,7 @@ class List(Value):
       try:
         return self.elements[other.value], None
       except:
-        return None, RTError(
+        return None, RunTimeError(
           other.pos_start, other.pos_end,
           'Element at this index could not be retrieved from list because index is out of bounds',
           self.context
@@ -1702,17 +1704,17 @@ class BaseFunction(Value):
     return new_context
 
   def check_args(self, arg_names, args):
-    res = RTResult()
+    res = RunTimeResult()
 
     if len(args) > len(arg_names):
-      return res.failure(RTError(
+      return res.failure(RunTimeError(
         self.pos_start, self.pos_end,
         f"{len(args) - len(arg_names)} too many args passed into {self}",
         self.context
       ))
 
     if len(args) < len(arg_names):
-      return res.failure(RTError(
+      return res.failure(RunTimeError(
         self.pos_start, self.pos_end,
         f"{len(arg_names) - len(args)} too few args passed into {self}",
         self.context
@@ -1728,7 +1730,7 @@ class BaseFunction(Value):
       exec_ctx.symbol_table.set(arg_name, arg_value)
 
   def check_and_populate_args(self, arg_names, args, exec_ctx):
-    res = RTResult()
+    res = RunTimeResult()
     res.register(self.check_args(arg_names, args))
     if res.should_return(): return res
     self.populate_args(arg_names, args, exec_ctx)
@@ -1742,9 +1744,9 @@ class Function(BaseFunction):
     self.should_auto_return = should_auto_return
 
   def execute(self, args):
-    res = RTResult()
+    res = RunTimeResult()
     interpreter = Interpreter()
-    exec_ctx = self.generate_new_context() 
+    exec_ctx = self.generate_new_context() # create context for the function
 
     res.register(self.check_and_populate_args(self.arg_names, args, exec_ctx))
     if res.should_return(): return res
@@ -1769,10 +1771,10 @@ class BuiltInFunction(BaseFunction):
     super().__init__(name)
 
   def execute(self, args):
-    res = RTResult()
+    res = RunTimeResult()
     exec_ctx = self.generate_new_context()
 
-    method_name = f'execute_{self.name}'
+    method_name = f'execute_{self.name}' # call the functions depending on the name
     method = getattr(self, method_name, self.no_visit_method)
 
     res.register(self.check_and_populate_args(method.arg_names, args, exec_ctx))
@@ -1798,42 +1800,42 @@ class BuiltInFunction(BaseFunction):
 
   def execute_print(self, exec_ctx):
     print(str(exec_ctx.symbol_table.get('value')))
-    return RTResult().success(Number.null)
+    return RunTimeResult().success(Number.null)
   execute_print.arg_names = ['value']
 
   def execute_is_string(self, exec_ctx):
     is_number = isinstance(exec_ctx.symbol_table.get("value"), String)
-    return RTResult().success(Number.true if is_number else Number.false)
+    return RunTimeResult().success(Number.true if is_number else Number.false)
   execute_is_string.arg_names = ["value"]
 
-  def execute_append(self, exec_ctx):
+  def execute_append(self, exec_ctx): # adds a value to the list
     list_ = exec_ctx.symbol_table.get("list")
     value = exec_ctx.symbol_table.get("value")
 
     if not isinstance(list_, List):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "First argument must be list",
         exec_ctx
       ))
 
     list_.elements.append(value)
-    return RTResult().success(Number.null)
+    return RunTimeResult().success(Number.null)
   execute_append.arg_names = ["list", "value"]
 
-  def execute_pop(self, exec_ctx):
+  def execute_pop(self, exec_ctx): # takes out a value from a list
     list_ = exec_ctx.symbol_table.get("list")
     index = exec_ctx.symbol_table.get("index")
 
-    if not isinstance(list_, List):
-      return RTResult().failure(RTError(
+    if not isinstance(list_, List): 
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "First argument must be list",
         exec_ctx
       ))
 
     if not isinstance(index, Number):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "Second argument must be number",
         exec_ctx
@@ -1842,54 +1844,54 @@ class BuiltInFunction(BaseFunction):
     try:
       element = list_.elements.pop(index.value)
     except:
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         'Element at this index could not be removed from list because index is out of bounds',
         exec_ctx
       ))
-    return RTResult().success(element)
+    return RunTimeResult().success(element)
   execute_pop.arg_names = ["list", "index"]
 
-  def execute_extend(self, exec_ctx):
+  def execute_extend(self, exec_ctx): # concatenates 2 lists
     listA = exec_ctx.symbol_table.get("listA")
     listB = exec_ctx.symbol_table.get("listB")
 
     if not isinstance(listA, List):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "First argument must be list",
         exec_ctx
       ))
 
     if not isinstance(listB, List):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "Second argument must be list",
         exec_ctx
       ))
 
     listA.elements.extend(listB.elements)
-    return RTResult().success(Number.null)
+    return RunTimeResult().success(Number.null)
   execute_extend.arg_names = ["listA", "listB"]
 
-  def execute_len(self, exec_ctx):
+  def execute_len(self, exec_ctx): # get the lenght of the list
     list_ = exec_ctx.symbol_table.get("list")
 
     if not isinstance(list_, List):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "Argument must be list",
         exec_ctx
       ))
 
-    return RTResult().success(Number(len(list_.elements)))
+    return RunTimeResult().success(Number(len(list_.elements)))
   execute_len.arg_names = ["list"]
 
   def execute_run(self, exec_ctx):
     fn = exec_ctx.symbol_table.get("fn")
 
     if not isinstance(fn, String):
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         "Second argument must be string",
         exec_ctx
@@ -1901,7 +1903,7 @@ class BuiltInFunction(BaseFunction):
       with open(fn, "r") as f:
         script = f.read()
     except Exception as e:
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         f"Failed to load script \"{fn}\"\n" + str(e),
         exec_ctx
@@ -1910,14 +1912,14 @@ class BuiltInFunction(BaseFunction):
     _, error = run(fn, script)
 
     if error:
-      return RTResult().failure(RTError(
+      return RunTimeResult().failure(RunTimeError(
         self.pos_start, self.pos_end,
         f"Failed to finish executing script \"{fn}\"\n" +
         error.as_string(),
         exec_ctx
       ))
 
-    return RTResult().success(Number.null)
+    return RunTimeResult().success(Number.null)
   execute_run.arg_names = ["fn"]
 
 BuiltInFunction.print       = BuiltInFunction("print")
@@ -1977,17 +1979,17 @@ class Interpreter:
   ###################################
 
   def visit_NumberNode(self, node, context):
-    return RTResult().success(
+    return RunTimeResult().success(
       Number(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
     )
 
   def visit_StringNode(self, node, context):
-    return RTResult().success(
+    return RunTimeResult().success(
       String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
     )
 
   def visit_ListNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
     elements = []
 
     for element_node in node.element_nodes:
@@ -1999,12 +2001,12 @@ class Interpreter:
     )
 
   def visit_VarAccessNode(self, node, context): # get variable for use
-    res = RTResult()
+    res = RunTimeResult()
     var_name = node.var_name_tok.value
     value = context.symbol_table.get(var_name)
 
     if not value:
-      return res.failure(RTError(
+      return res.failure(RunTimeError(
         node.pos_start, node.pos_end,
         f"'{var_name}' is not defined",
         context
@@ -2014,7 +2016,7 @@ class Interpreter:
     return res.success(value)
 
   def visit_VarAssignNode(self, node, context):  # assign value to variable
-    res = RTResult()
+    res = RunTimeResult()
     var_name = node.var_name_tok.value
     value = res.register(self.visit(node.value_node, context))
     if res.should_return(): return res
@@ -2023,7 +2025,7 @@ class Interpreter:
     return res.success(value)
 
   def visit_BinOpNode(self, node, context): # Operation between two nodes
-    res = RTResult()
+    res = RunTimeResult()
     left = res.register(self.visit(node.left_node, context))
     if res.should_return(): return res
     right = res.register(self.visit(node.right_node, context))
@@ -2062,7 +2064,7 @@ class Interpreter:
       return res.success(result.set_pos(node.pos_start, node.pos_end))
 
   def visit_UnaryOpNode(self, node, context): # support operations on a single node
-    res = RTResult()
+    res = RunTimeResult()
     number = res.register(self.visit(node.node, context))
     if res.should_return(): return res
 
@@ -2079,7 +2081,7 @@ class Interpreter:
       return res.success(number.set_pos(node.pos_start, node.pos_end))
 
   def visit_IfNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
 
     for condition, expr, should_return_null in node.cases:
       condition_value = res.register(self.visit(condition, context))
@@ -2099,7 +2101,7 @@ class Interpreter:
     return res.success(Number.null)
 
   def visit_ForNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
     elements = []
 
     start_value = res.register(self.visit(node.start_value_node, context))
@@ -2142,7 +2144,7 @@ class Interpreter:
     )
 
   def visit_WhileNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
     elements = []
 
     while True:
@@ -2169,7 +2171,7 @@ class Interpreter:
     )
 
   def visit_FuncDefNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
 
     func_name = node.var_name_tok.value if node.var_name_tok else None
     body_node = node.body_node
@@ -2182,7 +2184,7 @@ class Interpreter:
     return res.success(func_value)
 
   def visit_CallNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
     args = []
 
     value_to_call = res.register(self.visit(node.node_to_call, context))
@@ -2199,7 +2201,7 @@ class Interpreter:
     return res.success(return_value)
 
   def visit_ReturnNode(self, node, context):
-    res = RTResult()
+    res = RunTimeResult()
 
     if node.node_to_return:
       value = res.register(self.visit(node.node_to_return, context))
@@ -2210,10 +2212,10 @@ class Interpreter:
     return res.success_return(value)
 
   def visit_ContinueNode(self, node, context):
-    return RTResult().success_continue()
+    return RunTimeResult().success_continue()
 
   def visit_BreakNode(self, node, context):
-    return RTResult().success_break()
+    return RunTimeResult().success_break()
 
 #######################################
 # RUN

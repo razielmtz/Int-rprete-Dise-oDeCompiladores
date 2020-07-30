@@ -4,7 +4,7 @@ import language
 # Infinite loop for shell
 while True:
 	text = input('language > ')
-	if text.strip() == "": continue
+	if text.strip() == "": continue 
 	result, error = language.run('<stdin>', text)
 
 	if error:

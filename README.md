@@ -1,5 +1,7 @@
 # Interprete-DisenoDeCompiladores
 
+#### Referencia: https://www.youtube.com/watch?v=Eythq9848Fg&list=PLZQftyCk7_SdoVexSmwy_tBgs7P0b97yD&index=1
+
 ## Introduccion
 Este es un proyecto escolar creado para poder entender mejor el funcionamiento de un compilador y hacer nuestro propio lenguaje aunque no sea practico usarlo. Por esos mismos motivos decidimos cambiar las palabras clave por simbolos.
 
