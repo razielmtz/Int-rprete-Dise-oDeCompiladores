@@ -1,0 +1,47 @@
+# Encontar el minimo y colocarlo al principio
+
+@ encontrarMinimo (milista) 
+
+    $ length = LEN(milista)
+
+    $ resultado = []
+
+    $ min = 0
+
+    +++ i = 1 TO length -->
+
+        ? milista/min > milista/i -->
+            $ min = i
+        @@
+    @@
+
+    $ minimo = milista/min
+    POP(milista, min)
+
+
+    $ resultados = [minimo]
+
+    EXTEND(resultados, milista)
+
+    #+++ i = 0 TO (length - 1) -->
+
+    #    APPEND(resultados, milista/i)
+    #@@
+
+    PRINT(resultados)
+@@
+
+@ rec(num)
+    PRINT(num)
+    $ num = num + 1
+    ? num <= 15 -->
+        rec(num)
+    @@
+@@
+
+
+
+#encontrarMinimo([9,2,0,6,3])
+
+rec(9)
+
