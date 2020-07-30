@@ -1,6 +1,8 @@
+#####################################################
 # Encontar el minimo y colocarlo al principio
+#####################################################
 
-@ encontrarMinimo (milista) 
+@ encontrarMinimo (milista)
 
     $ length = LEN(milista)
 
@@ -31,17 +33,31 @@
     PRINT(resultados)
 @@
 
-@ rec(num)
-    PRINT(num)
-    $ num = num + 1
-    ? num <= 15 -->
-        rec(num)
+#####################################################
+# Factorial recursivo
+#####################################################
+
+@ fact(num, res)
+
+    $ res = res * num
+
+    $ num = num - 1
+
+    ? num != 0 -->
+
+        fact(num, res)
+
+    @@
+
+    ? num == 0 -->
+
+        PRINT(res)
+
     @@
 @@
 
 
 
-#encontrarMinimo([9,2,0,6,3])
+encontrarMinimo([9,2,0,6,3])
 
-rec(9)
-
+fact(5,1)
